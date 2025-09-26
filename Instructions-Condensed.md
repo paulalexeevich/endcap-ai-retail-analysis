@@ -56,6 +56,21 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=[from Supabase]
 GOOGLE_GEMINI_API_KEY=[from Google AI Studio]
 ```
 
+### Next.js Configuration (CRITICAL)
+```typescript
+// next.config.ts - Required for environment variable loading
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  env: {
+    GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY,
+  },
+  serverExternalPackages: ['@google/generative-ai'] // Note: moved from experimental in Next.js 15
+};
+
+export default nextConfig;
+```
+
 ### Gallery Filters Query
 ```sql
 SELECT i.*, CASE WHEN iar.id IS NOT NULL THEN 'processed' ELSE 'not_processed' END as status
@@ -102,10 +117,25 @@ LIMIT 10 OFFSET $4
 - **Fix**: Use `Record<string, unknown>` or proper interfaces
 - **Best Practice**: Define proper types for all API responses and database schemas
 
-### Environment Variable Loading
-- **Issue**: Server-side env vars not loading without restart
-- **Fix**: Restart dev server after changing .env.local
-- **Best Practice**: Set up env vars before first run, restart server when changed
+### Environment Variable Loading ⚠️ CRITICAL
+- **Issue**: Next.js 15 doesn't automatically load environment variables for server-side API calls
+- **Root Cause**: Environment variables undefined in server context, causing "Invalid API key" errors
+- **Fix**: Add to `next.config.ts`:
+```typescript
+const nextConfig: NextConfig = {
+  env: {
+    GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY,
+  }
+}
+```
+- **Additional Fix**: Server-side only logging to prevent client-side errors:
+```typescript
+if (!apiKey && typeof window === 'undefined') {
+  console.error('Missing GOOGLE_GEMINI_API_KEY environment variable')
+}
+```
+- **Verification**: Create `/api/test-env` endpoint to verify environment loading
+- **Critical**: Restart server with explicit variable: `GOOGLE_GEMINI_API_KEY=your_key npm run dev`
 
 ### Gemini API Integration
 - **Model**: Use `gemini-2.5-flash` (latest stable model with enhanced image understanding)
@@ -159,27 +189,37 @@ onError={(e) => {
 # Check table schema
 SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'image_analysis_results';
 
-# Test Gemini API and check quota
+# Test Gemini API and environment loading
 node -e "
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI('YOUR_API_KEY');
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-model.generateContent('Hello').then(r => console.log('✅ API working')).catch(e => console.log('❌ Error:', e.message));
+console.log('API Key loaded:', !!process.env.GOOGLE_GEMINI_API_KEY);
+if (process.env.GOOGLE_GEMINI_API_KEY) {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  model.generateContent('Hello').then(r => console.log('✅ API working')).catch(e => console.log('❌ Error:', e.message));
+} else {
+  console.log('❌ GOOGLE_GEMINI_API_KEY not set');
+}
 "
 
-# Verify environment loading
-console.log('API Key loaded:', !!process.env.GOOGLE_GEMINI_API_KEY)
+# Test environment loading in Next.js context
+curl http://localhost:3000/api/test-env
 
 # Check server logs for environment variable issues
 tail -f .next/server/app/analysis/page.js # Look for "Missing GOOGLE_GEMINI_API_KEY"
 ```
 
-### API Key Troubleshooting
+### API Key Troubleshooting ⚠️ UPDATED
+- **Environment Loading Issues**: Most "Invalid API key" errors are actually undefined environment variables
+  - **Solution**: Update `next.config.ts` with explicit env configuration
+  - **Test**: Use `/api/test-env` endpoint to verify: `curl http://localhost:3000/api/test-env`
+  - **Expected**: `{"hasApiKey":true,"keyPrefix":"AIzaSy...","allEnvVars":["GOOGLE_GEMINI_API_KEY"]}`
+- **Next.js 15 Changes**: `experimental.serverComponentsExternalPackages` moved to `serverExternalPackages`
 - **Quota Exceeded**: Free tier has very limited requests - upgrade to paid plan
 - **Model Not Found**: Some models require billing setup in Google AI Studio  
-- **Authentication Error**: API key may be invalid or restricted
+- **Authentication Error**: Verify API key is valid and not restricted
 - **Rate Limits**: Add delays between requests, respect quota limits
-- **Environment Loading**: Server restart required after .env changes
+- **Server Restart**: Always restart after environment variable changes
 
 ## Critical Notes
 - Use existing Supabase tables (perfect match)
