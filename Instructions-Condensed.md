@@ -108,9 +108,11 @@ LIMIT 10 OFFSET $4
 - **Best Practice**: Set up env vars before first run, restart server when changed
 
 ### Gemini API Integration
-- **Model**: Use `gemini-2.0-flash-exp` (latest experimental model)
+- **Model**: Use `gemini-pro` (stable model) - NOT `gemini-2.0-flash-exp` or `gemini-1.5-pro`
+- **API Key Issues**: Free tier has strict quota limits - may need paid plan
+- **Model Access**: Check available models with your API key - some require billing setup
 - **Rate Limiting**: Add 1-second delays between API calls
-- **Error Handling**: Wrap all API calls in try-catch with fallback responses
+- **Error Handling**: Wrap all API calls in try-catch with specific error messages for quota/auth issues
 - **JSON Parsing**: Clean response text (remove ```json markers) before parsing
 
 ### Results Page Query Structure
@@ -156,12 +158,27 @@ onError={(e) => {
 # Check table schema
 SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'image_analysis_results';
 
-# Test Gemini API
-node -e "const { GoogleGenerativeAI } = require('@google/generative-ai'); ..."
+# Test Gemini API and check quota
+node -e "
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const genAI = new GoogleGenerativeAI('YOUR_API_KEY');
+const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+model.generateContent('Hello').then(r => console.log('✅ API working')).catch(e => console.log('❌ Error:', e.message));
+"
 
 # Verify environment loading
 console.log('API Key loaded:', !!process.env.GOOGLE_GEMINI_API_KEY)
+
+# Check server logs for environment variable issues
+tail -f .next/server/app/analysis/page.js # Look for "Missing GOOGLE_GEMINI_API_KEY"
 ```
+
+### API Key Troubleshooting
+- **Quota Exceeded**: Free tier has very limited requests - upgrade to paid plan
+- **Model Not Found**: Some models require billing setup in Google AI Studio  
+- **Authentication Error**: API key may be invalid or restricted
+- **Rate Limits**: Add delays between requests, respect quota limits
+- **Environment Loading**: Server restart required after .env changes
 
 ## Critical Notes
 - Use existing Supabase tables (perfect match)

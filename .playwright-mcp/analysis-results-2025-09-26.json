@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-09-26T10:55:39.572Z",
+  "instruction": "Brand Recognition Focus",
+  "totalImages": 1,
+  "results": [
+    {
+      "imageId": 1,
+      "analysis": {
+        "products": [],
+        "equipment": [],
+        "brands": [],
+        "summary": "Error analyzing image: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent: [403 ] Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API.",
+        "timestamp": "2025-09-26T10:55:27.080Z"
+      }
+    }
+  ]
+}
