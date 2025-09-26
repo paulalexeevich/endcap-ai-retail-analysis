@@ -108,7 +108,8 @@ LIMIT 10 OFFSET $4
 - **Best Practice**: Set up env vars before first run, restart server when changed
 
 ### Gemini API Integration
-- **Model**: Use `gemini-pro` (stable model) - NOT `gemini-2.0-flash-exp` or `gemini-1.5-pro`
+- **Model**: Use `gemini-2.5-flash` (latest stable model with enhanced image understanding)
+- **API Structure**: Use proper contents/parts structure as per official docs
 - **API Key Issues**: Free tier has strict quota limits - may need paid plan
 - **Model Access**: Check available models with your API key - some require billing setup
 - **Rate Limiting**: Add 1-second delays between API calls
